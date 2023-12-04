@@ -176,10 +176,13 @@ jobs:
           # Export values
           echo "cert_manager_version=${CERT_MANAGER_VERSION}" >> ${GITHUB_OUTPUT}
           echo "rm_version=${RM_VERSION}" >> ${GITHUB_OUTPUT}
+      - name: Install Chartmuseum
+        run: cd tests && make e2e-install-chartmuseum
       - name: Cypress tests - Basics
         # Basics means tests without an extra elemental node needed
         env:
           BROWSER: chrome
+          CHARTMUSEUM_REPO: http://${{ needs.create-runner.outputs.public_dns }}
           CYPRESS_DOCKER: 'cypress/included:10.9.0'
           CAPI_UI_VERSION: ${{ inputs.capi_ui_version }}
           K8S_UPSTREAM_VERSION: ${{ inputs.upstream_cluster_version }}
@@ -190,6 +193,7 @@ jobs:
           SPEC: |
             /workdir/e2e/unit_tests/first_connection.spec.ts
             /workdir/e2e/unit_tests/user.spec.ts
+            /workdir/e2e/unit_tests/turtles_operator.spec.ts
             /workdir/e2e/unit_tests/capi_plugin.spec.ts
           UI_ACCOUNT: ${{ inputs.ui_account }}
           UPGRADE_OS_CHANNEL: ${{ inputs.upgrade_os_channel }}

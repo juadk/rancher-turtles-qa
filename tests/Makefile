@@ -8,6 +8,9 @@ generate-readme:
 	@./scripts/generate-readme > README.md
 
 # E2E tests
+e2e-install-chartmuseum:
+	sudo ./scripts/deploy-chartmuseum
+
 e2e-install-rancher: deps
 	ginkgo --label-filter install -r -v ./e2e
 

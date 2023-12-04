@@ -38,14 +38,5 @@ helm plugin install https://github.com/chartmuseum/helm-push.git
 # Create a local helm repo
 helm repo add chartmuseum http://localhost:8080
 
-# Download needed helm charts
-helm pull oci://registry.opensuse.org/isv/rancher/elemental/dev/charts/rancher/elemental-operator-crds-chart
-helm pull oci://registry.opensuse.org/isv/rancher/elemental/dev/charts/rancher/elemental-operator-chart
-
-# Extract helm charts
-tar -xvzf elemental-operator-crds-*
-tar -xvzf elemental-operator-chart-*
-
-# Push helm charts to local repo
-helm cm-push elemental-operator chartmuseum
-helm cm-push elemental-operator-crds chartmuseum
+# Push helm chart to local repo
+helm cm-push ./assets/rancher-turtles-0.3.0.tgz chartmuseum
