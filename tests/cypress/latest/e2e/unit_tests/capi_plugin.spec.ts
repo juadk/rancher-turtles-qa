@@ -58,4 +58,13 @@ describe('Install CAPI plugin', () => {
         .and('contain', 'Uninstall');
     })
   );
+
+  qase(14,
+    it('Check CAPI Menu', () => {
+      cypressLib.accesMenu('Cluster Management')
+      cy.clickNavMenu(['CAPI', 'CAPI Clusters'])
+      cy.contains('header', 'CAPI Clusters')
+        .should('be.visible');
+    })
+  );
 });
