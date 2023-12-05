@@ -12,46 +12,37 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { Elemental } from '~/support/elemental';
 import '~/support/commands';
-import filterTests from '~/support/filterTests.js';
 import * as cypressLib from '@rancher-ecp-qa/cypress-library';
 import { qase } from 'cypress-qase-reporter/dist/mocha';
 
-filterTests(['main'], () => {
-  Cypress.config();
-  describe('Menu testing', () => {
-    const elemental     = new Elemental();
-    const elementalUser = "elemental-user"
-    const uiAccount     = Cypress.env('ui_account');
-    const uiPassword    = "rancherpassword"
-  
-    beforeEach(() => {
-      (uiAccount == "user") ? cy.login(elementalUser, uiPassword) : cy.login();
-      cy.visit('/');
-      cypressLib.burgerMenuToggle();
-    });
-  
-    qase(2,
-      it('Check Elemental logo', () => {
-        // Elemental's icon should appear in the side menu
-        cypressLib.checkNavIcon('elemental')
-          .should('exist');
-      })
-    );
-    
-    qase(3,
-      it('Check Elemental menu', () => {
-        // Elemental's icon should appear in the side menu
-        cypressLib.checkNavIcon('elemental')
-          .should('exist');
-  
-        // Click on the Elemental's icon
-        cypressLib.accesMenu('OS Management');
-  
-        // Check Elemental's side menu
-        elemental.checkElementalNav();
-      })
-    );
+Cypress.config();
+describe('Menu testing', () => {
+  beforeEach(() => {
+    cy.login();
+    cy.visit('/');
+    cypressLib.burgerMenuToggle();
   });
-}); 
+
+  qase(3,
+    it('Check Turtles menu', () => {
+      // Cluster Management's icon should appear in the side menu
+      cypressLib.checkNavIcon('cluster-management')
+        .should('exist');
+
+      // Click on the Cluster Management's icon
+      cypressLib.accesMenu('Cluster Management');
+
+      // Open Turtles menu
+      cypressLib.accesMenu('CAPI');
+
+      // Check Turtles's side menu
+      // TODO: DO a loop to check all the menu
+      cy.contains('.nav', "CAPI Clusters")
+      cy.contains('.nav', "Machine Deployments")
+      cy.contains('.nav', "Machine Sets")
+      cy.contains('.nav', "Cluster Classes")
+      cy.contains('.nav', "Infrastructure Providers")
+    })
+  );
+});

@@ -13,7 +13,6 @@ limitations under the License.
 */
 
 import '~/support/commands';
-import filterTests from '~/support/filterTests.js';
 import { isUIVersion } from '../../support/utils';
 import * as cypressLib from '@rancher-ecp-qa/cypress-library';
 import { qase } from 'cypress-qase-reporter/dist/mocha';

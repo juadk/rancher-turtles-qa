@@ -17,7 +17,6 @@ package e2e_test
 import (
 	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 	"time"
 
@@ -316,39 +315,5 @@ var _ = Describe("E2E - Install Rancher Manager", Label("install"), func() {
 			// Also don't check the returned error, as it will always not equal 0
 			_ = exec.Command("bash", "-c", "sudo mv -f /etc/rancher/{k3s,rke2}/{k3s,rke2}.yaml ~/").Run()
 		})
-
-		if testType == "ui" {
-			By("Workaround for upgrade test, restart Fleet controller and agent", func() {
-				for _, d := range [][]string{
-					{"cattle-fleet-local-system", "fleet-agent"},
-					{"cattle-fleet-system", "fleet-controller"},
-				} {
-					rolloutDeployment(d[0], d[1])
-				}
-			})
-		}
-		// Deploy operator in CLI test or if Rancher version is < 2.8
-		// because operator can not be installed trough Marketplace in Rancher 2.7.x
-		matched, _ := regexp.MatchString(`2.8`, rancherHeadVersion)
-		if strings.Contains(testType, "cli") || matched == false {
-			By("Installing Elemental Operator", func() {
-				for _, chart := range []string{"elemental-operator-crds", "elemental-operator"} {
-					RunHelmCmdWithRetry("upgrade", "--install", chart,
-						operatorRepo+"/"+chart+"-chart",
-						"--namespace", "cattle-elemental-system",
-						"--create-namespace",
-						"--wait", "--wait-for-jobs",
-					)
-
-					// Delay few seconds for all to be installed
-					time.Sleep(tools.SetTimeout(20 * time.Second))
-				}
-
-				// Wait for pod to be started
-				Eventually(func() error {
-					return rancher.CheckPod(k, [][]string{{"cattle-elemental-system", "app=elemental-operator"}})
-				}, tools.SetTimeout(4*time.Minute), 30*time.Second).Should(BeNil())
-			})
-		}
 	})
 })

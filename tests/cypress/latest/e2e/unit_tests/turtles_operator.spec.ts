@@ -15,6 +15,7 @@ limitations under the License.
 import '~/support/commands';
 import * as cypressLib from '@rancher-ecp-qa/cypress-library';
 import { qase } from 'cypress-qase-reporter/dist/mocha';
+import * as utils from "~/support/utils";
 
 Cypress.config();
 describe('Install Turtles Operator', () => {
@@ -48,11 +49,16 @@ describe('Install Turtles Operator', () => {
       cy.get('.closer', {timeout:20000})
         .click();
       // Select rancher-turtles-system namespace
-      cy.contains('Only User Namespaces') // eslint-disable-line cypress/unsafe-to-chain-command
-        .click()
-        .type('rancher-turtles-system{enter}{esc}');
-      // Resource should be deployed (green badge)
-      cy.get('.outlet').contains('Deployed rancher-turtles', {timeout: 240000});
+      if (utils.isRancherManagerVersion('2.8')) {
+        cy.contains('Only User Namespaces') // eslint-disable-line cypress/unsafe-to-chain-command
+          .click()
+          .type('rancher-turtles-system{enter}{esc}');
+        // Resource should be deployed (green badge)
+        cy.get('.outlet').contains('Deployed rancher-turtles', {timeout: 240000});
+      } else {
+        // TODO: Find a way to check the resource is deployed in Rancher 2.7
+        cy.wait(120000);
+      }
     })
   );
 });

@@ -12,16 +12,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { Elemental } from '~/support/elemental';
 import '~/support/commands';
-import filterTests from '~/support/filterTests.js';
 import * as cypressLib from '@rancher-ecp-qa/cypress-library';
 import { qase } from 'cypress-qase-reporter/dist/mocha';
 
 Cypress.config();
 describe('User role testing', () => {
-  const elemental     = new Elemental();
-  const elementalUser = "elemental-user"
   const stdUser       = "std-user"
   const uiPassword    = "rancherpassword"
 
