@@ -1,5 +1,5 @@
 # This workflow calls the master E2E workflow with custom variables
-name: UI-K3s-RM_head_2.8
+name: UI-RM_head_2.8
 
 on:
   workflow_dispatch:
