@@ -7,7 +7,7 @@ export default defineConfig({
   reporter: 'cypress-qase-reporter',
   reporterOptions: {
     'apiToken': qaseAPIToken,
-    'projectCode': 'ELEMENTAL',
+    'projectCode': 'CAPI',
     'logging': true,
   },
   e2e: {

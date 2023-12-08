@@ -27,50 +27,9 @@ describe('User role testing', () => {
 
   qase(15,
     it('Create standard user', () => {
-      // User without the elemental-administrator role
       cy.login();
       cypressLib.burgerMenuToggle();
       cypressLib.createUser(stdUser, uiPassword);
     })
   );
-
-  //qase(14,
-  //  it('Create elemental user', () => {
-  //    // User with the elemental-administrator role
-  //    cy.login();
-  //    cypressLib.burgerMenuToggle();
-  //    cypressLib.createUser(elementalUser, uiPassword, 'Elemental Administrator');
-  //  })
-  //);
-
-  //qase(47,
-  //  it('Elemental user should access the OS management menu', () => {
-  //    cy.login(elementalUser, uiPassword);
-  //    cy.getBySel('banner-title')
-  //      .contains('Welcome to Rancher');
-  //    cypressLib.burgerMenuToggle();
-  //    cypressLib.checkNavIcon('elemental').should('exist');
-  //    cypressLib.accesMenu('OS Management');
-  //    elemental.checkElementalNav();
-  //  })
-  //);
-
-  //qase(48,
-  //  it('Standard user should not access the OS management menu', () => {
-  //    cy.login(stdUser, uiPassword);
-  //    cy.getBySel('banner-title')
-  //      .contains('Welcome to Rancher');
-  //    cypressLib.burgerMenuToggle();
-  //    cypressLib.checkNavIcon('elemental').should('exist');
-  //    cypressLib.accesMenu('OS Management');
-  //    // User without appropriate role will get a specific page
-  //    cy.getBySel('elemental-icon')
-  //      .should('exist');
-  //    cy.getBySel('elemental-description-text')
-  //      .contains('Elemental is a software stack')
-  //      .should('exist');
-  //    cy.getBySel('warning-not-install-or-no-schema')
-  //      .should('exist');
-  //  })
-  //);
 });
