@@ -56,118 +56,48 @@ var _ = Describe("E2E - Install Rancher Manager", Label("install"), func() {
 	localKubeconfig := os.Getenv("HOME") + "/.kube/config"
 
 	It("Install Rancher Manager", func() {
-		if strings.Contains(k8sUpstreamVersion, "rke2") {
-			By("Installing RKE2", func() {
-				// Get RKE2 installation script
-				fileName := "rke2-install.sh"
-				Eventually(func() error {
-					return tools.GetFileFromURL("https://get.rke2.io", fileName, true)
-				}, tools.SetTimeout(2*time.Minute), 10*time.Second).ShouldNot(HaveOccurred())
+		By("Installing K3s", func() {
+			// Get K3s installation script
+			fileName := "k3s-install.sh"
+			Eventually(func() error {
+				return tools.GetFileFromURL("https://get.k3s.io", fileName, true)
+			}, tools.SetTimeout(2*time.Minute), 10*time.Second).ShouldNot(HaveOccurred())
 
-				// Retry in case of (sporadic) failure...
-				count := 1
-				Eventually(func() error {
-					// Execute RKE2 installation
-					out, err := exec.Command("sudo", "--preserve-env=INSTALL_RKE2_VERSION", "sh", fileName).CombinedOutput()
-					GinkgoWriter.Printf("RKE2 installation loop %d:\n%s\n", count, out)
-					count++
-					return err
-				}, tools.SetTimeout(2*time.Minute), 5*time.Second).Should(BeNil())
-			})
+			// Set command and arguments
+			installCmd := exec.Command("sh", fileName)
+			installCmd.Env = append(os.Environ(), "INSTALL_K3S_EXEC=--disable metrics-server")
 
-			if clusterType == "hardened" {
-				By("Configuring hardened cluster", func() {
-					err := exec.Command("sudo", installHardenedScript).Run()
-					Expect(err).To(Not(HaveOccurred()))
-				})
+			// Retry in case of (sporadic) failure...
+			count := 1
+			Eventually(func() error {
+				// Execute K3s installation
+				out, err := installCmd.CombinedOutput()
+				GinkgoWriter.Printf("K3s installation loop %d:\n%s\n", count, out)
+				count++
+				return err
+			}, tools.SetTimeout(2*time.Minute), 5*time.Second).Should(BeNil())
+		})
+
+		By("Starting K3s", func() {
+			err := exec.Command("sudo", "systemctl", "start", "k3s").Run()
+			Expect(err).To(Not(HaveOccurred()))
+
+			// Delay few seconds before checking
+			time.Sleep(tools.SetTimeout(20 * time.Second))
+		})
+
+		By("Waiting for K3s to be started", func() {
+			// Wait for all pods to be started
+			checkList := [][]string{
+				{"kube-system", "app=local-path-provisioner"},
+				{"kube-system", "k8s-app=kube-dns"},
+				{"kube-system", "app.kubernetes.io/name=traefik"},
+				{"kube-system", "svccontroller.k3s.cattle.io/svcname=traefik"},
 			}
-
-			By("Starting RKE2", func() {
-				// Copy config file, this allows custom configuration for RKE2 installation
-				// NOTE: CopyFile cannot be used, as we need root permissions for this file
-				err := exec.Command("sudo", "mkdir", "-p", "/etc/rancher/rke2").Run()
-				Expect(err).To(Not(HaveOccurred()))
-				err = exec.Command("sudo", "cp", configRKE2Yaml, "/etc/rancher/rke2/config.yaml").Run()
-				Expect(err).To(Not(HaveOccurred()))
-
-				// Activate and start RKE2
-				err = exec.Command("sudo", "systemctl", "enable", "--now", "rke2-server.service").Run()
-				Expect(err).To(Not(HaveOccurred()))
-
-				// Delay few seconds before checking
-				time.Sleep(tools.SetTimeout(20 * time.Second))
-
-				err = exec.Command("sudo", "ln", "-s", "/var/lib/rancher/rke2/bin/kubectl", "/usr/local/bin/kubectl").Run()
-				Expect(err).To(Not(HaveOccurred()))
-			})
-
-			By("Waiting for RKE2 to be started", func() {
-				// Wait for all pods to be started
-				err := os.Setenv("KUBECONFIG", "/etc/rancher/rke2/rke2.yaml")
-				Expect(err).To(Not(HaveOccurred()))
-
-				checkList := [][]string{
-					{"kube-system", "k8s-app=kube-dns"},
-					{"kube-system", "app.kubernetes.io/name=rke2-ingress-nginx"},
-				}
-				Eventually(func() error {
-					return rancher.CheckPod(k, checkList)
-				}, tools.SetTimeout(4*time.Minute), 30*time.Second).Should(BeNil())
-
-				err = k.WaitLabelFilter("kube-system", "Ready", "rke2-ingress-nginx-controller", "app.kubernetes.io/name=rke2-ingress-nginx")
-				Expect(err).To(Not(HaveOccurred()))
-			})
-		} else {
-			By("Installing K3s", func() {
-				// Get K3s installation script
-				fileName := "k3s-install.sh"
-				Eventually(func() error {
-					return tools.GetFileFromURL("https://get.k3s.io", fileName, true)
-				}, tools.SetTimeout(2*time.Minute), 10*time.Second).ShouldNot(HaveOccurred())
-
-				// Set command and arguments
-				installCmd := exec.Command("sh", fileName)
-				installCmd.Env = append(os.Environ(), "INSTALL_K3S_EXEC=--disable metrics-server")
-
-				// Retry in case of (sporadic) failure...
-				count := 1
-				Eventually(func() error {
-					// Execute K3s installation
-					out, err := installCmd.CombinedOutput()
-					GinkgoWriter.Printf("K3s installation loop %d:\n%s\n", count, out)
-					count++
-					return err
-				}, tools.SetTimeout(2*time.Minute), 5*time.Second).Should(BeNil())
-			})
-
-			if clusterType == "hardened" {
-				By("Configuring hardened cluster", func() {
-					err := exec.Command("sudo", installHardenedScript).Run()
-					Expect(err).To(Not(HaveOccurred()))
-				})
-			}
-
-			By("Starting K3s", func() {
-				err := exec.Command("sudo", "systemctl", "start", "k3s").Run()
-				Expect(err).To(Not(HaveOccurred()))
-
-				// Delay few seconds before checking
-				time.Sleep(tools.SetTimeout(20 * time.Second))
-			})
-
-			By("Waiting for K3s to be started", func() {
-				// Wait for all pods to be started
-				checkList := [][]string{
-					{"kube-system", "app=local-path-provisioner"},
-					{"kube-system", "k8s-app=kube-dns"},
-					{"kube-system", "app.kubernetes.io/name=traefik"},
-					{"kube-system", "svccontroller.k3s.cattle.io/svcname=traefik"},
-				}
-				Eventually(func() error {
-					return rancher.CheckPod(k, checkList)
-				}, tools.SetTimeout(4*time.Minute), 30*time.Second).Should(BeNil())
-			})
-		}
+			Eventually(func() error {
+				return rancher.CheckPod(k, checkList)
+			}, tools.SetTimeout(4*time.Minute), 30*time.Second).Should(BeNil())
+		})
 
 		By("Configuring Kubeconfig file", func() {
 			// Copy K3s file in ~/.kube/config
@@ -181,64 +111,34 @@ var _ = Describe("E2E - Install Rancher Manager", Label("install"), func() {
 			Expect(err).To(Not(HaveOccurred()))
 		})
 
-		if caType == "private" {
-			By("Configuring Private CA", func() {
-				out, err := exec.Command(configPrivateCAScript).CombinedOutput()
-				GinkgoWriter.Printf("%s\n", out)
-				Expect(err).To(Not(HaveOccurred()))
-			})
-		} else {
-			By("Installing CertManager", func() {
-				RunHelmCmdWithRetry("repo", "add", "jetstack", "https://charts.jetstack.io")
-				RunHelmCmdWithRetry("repo", "update")
+		By("Installing CertManager", func() {
+			RunHelmCmdWithRetry("repo", "add", "jetstack", "https://charts.jetstack.io")
+			RunHelmCmdWithRetry("repo", "update")
 
-				// Set flags for cert-manager installation
-				flags := []string{
-					"upgrade", "--install", "cert-manager", "jetstack/cert-manager",
-					"--namespace", "cert-manager",
-					"--create-namespace",
-					"--set", "installCRDs=true",
-					"--wait", "--wait-for-jobs",
-				}
+			// Set flags for cert-manager installation
+			flags := []string{
+				"upgrade", "--install", "cert-manager", "jetstack/cert-manager",
+				"--namespace", "cert-manager",
+				"--create-namespace",
+				"--set", "installCRDs=true",
+				"--wait", "--wait-for-jobs",
+			}
 
-				if clusterType == "hardened" {
-					flags = append(flags, "--version", CertManagerVersion)
-				}
+			RunHelmCmdWithRetry(flags...)
 
-				RunHelmCmdWithRetry(flags...)
-
-				checkList := [][]string{
-					{"cert-manager", "app.kubernetes.io/component=controller"},
-					{"cert-manager", "app.kubernetes.io/component=webhook"},
-					{"cert-manager", "app.kubernetes.io/component=cainjector"},
-				}
-				Eventually(func() error {
-					return rancher.CheckPod(k, checkList)
-				}, tools.SetTimeout(4*time.Minute), 30*time.Second).Should(BeNil())
-			})
-		}
+			checkList := [][]string{
+				{"cert-manager", "app.kubernetes.io/component=controller"},
+				{"cert-manager", "app.kubernetes.io/component=webhook"},
+				{"cert-manager", "app.kubernetes.io/component=cainjector"},
+			}
+			Eventually(func() error {
+				return rancher.CheckPod(k, checkList)
+			}, tools.SetTimeout(4*time.Minute), 30*time.Second).Should(BeNil())
+		})
 
 		By("Installing Rancher Manager", func() {
-			err := rancher.DeployRancherManager(rancherHostname, rancherChannel, rancherVersion, rancherHeadVersion, caType, proxy)
+			err := rancher.DeployRancherManager(rancherHostname, rancherChannel, rancherVersion, rancherHeadVersion, "none", "none")
 			Expect(err).To(Not(HaveOccurred()))
-
-			// Inject secret for Private CA
-			if caType == "private" {
-				_, err := kubectl.Run("create", "secret",
-					"--namespace", "cattle-system",
-					"tls", "tls-rancher-ingress",
-					"--cert=tls.crt",
-					"--key=tls.key",
-				)
-				Expect(err).To(Not(HaveOccurred()))
-
-				_, err = kubectl.Run("create", "secret",
-					"--namespace", "cattle-system",
-					"generic", "tls-ca",
-					"--from-file=cacerts.pem=./cacerts.pem",
-				)
-				Expect(err).To(Not(HaveOccurred()))
-			}
 
 			// Wait for all pods to be started
 			checkList := [][]string{
@@ -250,25 +150,8 @@ var _ = Describe("E2E - Install Rancher Manager", Label("install"), func() {
 				return rancher.CheckPod(k, checkList)
 			}, tools.SetTimeout(4*time.Minute), 30*time.Second).Should(BeNil())
 
-			// We have to restart Rancher Manager to be sure that Private CA is used
-			if caType == "private" {
-				rolloutDeployment("cattle-system", "rancher")
-			}
-
 			// A bit dirty be better to wait a little here for all to be correctly started
 			time.Sleep(2 * time.Minute)
-
-			// Check issuer for Private CA
-			if caType == "private" {
-				Eventually(func() error {
-					out, err := exec.Command("curl", "-vk", "https://"+rancherHostname).CombinedOutput()
-					if err != nil {
-						// Show only if there's no error
-						GinkgoWriter.Printf("%s\n", out)
-					}
-					return err
-				}, tools.SetTimeout(2*time.Minute), 5*time.Second).Should(Not(HaveOccurred()))
-			}
 		})
 
 		By("Configuring kubectl to use Rancher admin user", func() {
