@@ -149,12 +149,28 @@ jobs:
       RANCHER_VERSION: ${{ inputs.rancher_version }}
       TIMEOUT_SCALE: 3
     steps:
+      # Build rancher-turtles nightly chart
+      - name: Check out rancher-turtles repo
+        uses: actions/checkout@v3
+        with:
+          repository: rancher-sandbox/rancher-turtles
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+      - name: Make chart
+        run: make e2e-image
+      - name: Copy chart file
+        run: sudo cp ${{ github.workspace }}/out/package/rancher-turtles-0.0.1.tgz ${{ runner.temp }}
+
       - name: Checkout
         uses: actions/checkout@v3
       - name: Install Go
         uses: actions/setup-go@v3
         with:
           go-version-file: tests/go.mod
+      - name: Copy chart file for chartmuseum
+        run: sudo cp ${{ runner.temp }}/rancher-turtles-0.0.1.tgz ${{ github.workspace }}/tests/assets
       - name: Install preriquisite components
         env:
           PUBLIC_DNS: ${{ needs.create-runner.outputs.public_dns }}
